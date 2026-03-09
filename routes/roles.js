@@ -1,22 +1,30 @@
 var express = require("express");
 var router = express.Router();
-
 let roleModel = require("../schemas/roles");
+let { checkLogin, checkRole } = require('../utils/authHandler.js')
 
+// ============================================================
+// PHÂN QUYỀN ROLES:
+//   GET /        -> ADMIN + MODERATOR (đọc tất cả)
+//   GET /:id     -> ADMIN + MODERATOR (đọc tất cả)
+//   POST /       -> chỉ ADMIN
+//   PUT /:id     -> chỉ ADMIN
+//   DELETE /:id  -> chỉ ADMIN
+// ============================================================
 
-router.get("/", async function (req, res, next) {
+// ✅ GET all roles - ADMIN và MODERATOR
+router.get("/", checkLogin, checkRole("ADMIN", "MODERATOR"), async function (req, res, next) {
     let roles = await roleModel.find({ isDeleted: false });
     res.send(roles);
 });
 
-
-router.get("/:id", async function (req, res, next) {
+// ✅ GET role by id - ADMIN và MODERATOR
+router.get("/:id", checkLogin, checkRole("ADMIN", "MODERATOR"), async function (req, res, next) {
     try {
         let result = await roleModel.find({ _id: req.params.id, isDeleted: false });
         if (result.length > 0) {
             res.send(result);
-        }
-        else {
+        } else {
             res.status(404).send({ message: "id not found" });
         }
     } catch (error) {
@@ -24,8 +32,8 @@ router.get("/:id", async function (req, res, next) {
     }
 });
 
-
-router.post("/", async function (req, res, next) {
+// ✅ POST create role - chỉ ADMIN
+router.post("/", checkLogin, checkRole("ADMIN"), async function (req, res, next) {
     try {
         let newItem = new roleModel({
             name: req.body.name,
@@ -38,7 +46,8 @@ router.post("/", async function (req, res, next) {
     }
 });
 
-router.put("/:id", async function (req, res, next) {
+// ✅ PUT update role - chỉ ADMIN
+router.put("/:id", checkLogin, checkRole("ADMIN"), async function (req, res, next) {
     try {
         let id = req.params.id;
         let updatedItem = await roleModel.findByIdAndUpdate(id, req.body, { new: true });
@@ -51,7 +60,8 @@ router.put("/:id", async function (req, res, next) {
     }
 });
 
-router.delete("/:id", async function (req, res, next) {
+// ✅ DELETE role - chỉ ADMIN
+router.delete("/:id", checkLogin, checkRole("ADMIN"), async function (req, res, next) {
     try {
         let id = req.params.id;
         let updatedItem = await roleModel.findByIdAndUpdate(
