@@ -49,20 +49,34 @@ router.get('/:id', async function (req, res, next) {
 
 // ✅ POST create product - chỉ ADMIN hoặc MODERATOR
 router.post('/', checkLogin, checkRole("ADMIN", "MODERATOR"), async function (req, res, next) {
-  let newObj = new modelProduct({
-    title: req.body.title,
-    slug: slugify(req.body.title, {
+  try {
+    // Tạo slug từ title
+    let baseSlug = slugify(req.body.title, {
       replacement: '-', remove: undefined,
       locale: 'vi', trim: true
-    }),
-    price: req.body.price,
-    description: req.body.description,
-    category: req.body.category,
-    images: req.body.images
-  })
-  await newObj.save();
-  res.send(newObj)
+    })
+    // Thêm timestamp để tránh trùng slug nếu cùng tên sản phẩm
+    let finalSlug = baseSlug + '-' + Date.now()
+
+    let newObj = new modelProduct({
+      title: req.body.title,
+      slug: finalSlug,
+      price: req.body.price,
+      description: req.body.description,
+      category: req.body.category,
+      images: req.body.images
+    })
+    await newObj.save();
+    res.send(newObj)
+  } catch (error) {
+    // Lỗi duplicate key (E11000) hoặc validation
+    if (error.code === 11000) {
+      return res.status(400).send({ message: "Sản phẩm bị trùng slug, vui lòng đổi tên!" })
+    }
+    res.status(400).send({ message: error.message })
+  }
 })
+
 
 // ✅ PUT update product - chỉ ADMIN hoặc MODERATOR
 router.put('/:id', checkLogin, checkRole("ADMIN", "MODERATOR"), async function (req, res, next) {
